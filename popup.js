@@ -33,22 +33,6 @@
     saveBtn.disabled = clearBtn.disabled = true;
   }
 
-  /* Ensure the content script is present in the tab, injecting it on demand
-     (handles tabs that were open before the extension was loaded). Uses the
-     "scripting" + "activeTab" permissions. */
-  function ensureContentScript(tabId, cb) {
-    chrome.tabs.sendMessage(tabId, { type: "ping" }, (resp) => {
-      if (!chrome.runtime.lastError && resp && resp.ok) { cb(true); return; }
-      chrome.scripting.executeScript(
-        { target: { tabId }, files: ["content.js"] },
-        () => {
-          if (chrome.runtime.lastError) { cb(false); return; }
-          setTimeout(() => cb(true), 150); // let it boot
-        }
-      );
-    });
-  }
-
   function fillInputs() {
     const w = currentScopeWidths();
     colsEl.querySelectorAll("input").forEach((inp) => {
@@ -120,9 +104,7 @@
         else listWidths = cfgForScope || {};
         setStatus(scopeIsGlobal() ? "Saved globally (all lists)." : "Saved for this list.", true);
         if (activeTabId != null) {
-          ensureContentScript(activeTabId, () => {
-            chrome.tabs.sendMessage(activeTabId, { type: "apply" }, () => void chrome.runtime.lastError);
-          });
+          chrome.tabs.sendMessage(activeTabId, { type: "apply" }, () => void chrome.runtime.lastError);
         }
       });
     });
@@ -141,25 +123,18 @@
     }[c]));
   }
 
-  // Boot: find the active tab, make sure the content script is there, then ask it.
+  // Ask the content script in the active tab for the current list's columns.
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tab = tabs && tabs[0];
     if (!tab) { render(null); return; }
     activeTabId = tab.id;
-    ensureContentScript(tab.id, (ok) => {
-      if (!ok) {
-        metaEl.textContent = "Open a Halo (*.halopsa.com) list tab, then reopen this popup.";
+    chrome.tabs.sendMessage(tab.id, { type: "getListInfo" }, (resp) => {
+      if (chrome.runtime.lastError || !resp) {
+        metaEl.textContent = "Open a Halo (*.halopsa.com) list tab and refresh it, then reopen this popup.";
         showEmpty();
         return;
       }
-      chrome.tabs.sendMessage(tab.id, { type: "getListInfo" }, (resp) => {
-        if (chrome.runtime.lastError || !resp) {
-          metaEl.textContent = "Open a Halo (*.halopsa.com) list tab, then reopen this popup.";
-          showEmpty();
-          return;
-        }
-        render(resp);
-      });
+      render(resp);
     });
   });
 })();

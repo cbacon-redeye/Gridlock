@@ -142,10 +142,6 @@
   /* --- popup messaging ---------------------------------------------------- */
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!msg) return false;
-    if (msg.type === "ping") {
-      sendResponse({ ok: true });
-      return true;
-    }
     if (msg.type === "getListInfo") {
       const key = getListKey();
       const table = getTable();
