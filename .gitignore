@@ -1,0 +1,13 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Packaged builds
+*.zip
+*.crx
+*.pem
+
+# Local scratch
+/_verify/
