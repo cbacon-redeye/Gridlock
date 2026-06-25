@@ -19,14 +19,29 @@
   let config = {};
 
   /* --- list identity ------------------------------------------------------ */
-  // A Halo list is identified by viewid (the view) + selid (the selected list).
-  // viewid alone is shared across lists in the same view, so both are needed.
+  // Identify a list by its stable display name rather than URL params, which
+  // drift between visits (selid/viewid change as you navigate) and caused saved
+  // widths to be stored under a key that no longer matched on return.
+  function getListName() {
+    // document.title looks like "Tickets > Action Tickets" and is count-free.
+    const parts = (document.title || "").split(">");
+    let name = (parts[parts.length - 1] || "").trim();
+    // ignore the generic app title shown briefly during load
+    if (/^halo$/i.test(name)) name = "";
+    // strip a trailing count badge like "(47)" if present
+    name = name.replace(/\s*\(\d+\)\s*$/, "").trim();
+    return name;
+  }
+
   function getListKey() {
+    const name = getListName();
+    if (name) return "name:" + name.toLowerCase();
+    // last-resort fallback to URL params if no name is available yet
     const p = new URLSearchParams(location.search);
     const viewid = p.get("viewid");
     const selid = p.get("selid");
-    if (selid) return (viewid || "v") + ":" + selid;
-    return viewid || null;
+    if (selid) return "url:" + (viewid || "v") + ":" + selid;
+    return viewid ? "url:" + viewid : null;
   }
 
   /* --- column detection --------------------------------------------------- */
